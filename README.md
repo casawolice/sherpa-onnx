@@ -1,5 +1,8 @@
 <div align="center">
 
+[![English](https://img.shields.io/badge/README-English-blue.svg)](./README.md)
+[![中文](https://img.shields.io/badge/README-中文-lightgrey.svg)](./README-zh.md)
+
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/k2-fsa/sherpa-onnx)
 
 </div>
@@ -61,6 +64,70 @@ It also supports WebAssembly.
 |     ✔️                    |
 
 [Join our discord](https://discord.gg/fJdxzg2VbG)
+
+
+## Sharing the host's ONNX Runtime (dynamic loading)
+
+> 中文说明见 [README-zh.md](./README-zh.md)。
+
+By default, sherpa-onnx links `libonnxruntime` at build time and bundles it into
+its artifacts. This fork adds an optional mode that loads ONNX Runtime (ORT) **at
+runtime** via `dlopen`/`LoadLibrary` instead, so sherpa-onnx can be embedded into
+a host application that already ships its own ORT and **share a single ORT
+instance** — avoiding the symbol/version conflicts that come from linking a
+second copy into the same process.
+
+Only the ONNX Runtime headers are needed at compile time; the resulting
+`libsherpa-onnx-*` has **no link-time dependency** on `libonnxruntime`.
+
+### Enabling it
+
+Turn on the CMake option (default is `OFF`, so normal builds are unchanged):
+
+```bash
+cmake -DSHERPA_ONNX_ENABLE_DYNAMIC_ORT_LOADING=ON /path/to/sherpa-onnx
+```
+
+When enabled:
+
+- sherpa-onnx does not link `libonnxruntime`, and does not bundle it into the
+  install tree / wheel / AAR / etc.
+- At runtime it defines `OrtGetApiBase` (the single C entry point of ORT) plus
+  the NNAPI/CoreML/DirectML provider-factory symbols, forwarding them to the ORT
+  library it loads. None of the existing model/decoder code changes.
+
+### How the ORT library is located at runtime
+
+1. **`SHERPA_ONNX_DYNAMIC_ORT_LIBRARY_PATH`** — if this environment variable is
+   set (to a bare name or an absolute path), that library is used.
+2. Otherwise a default name is tried per platform:
+   `libonnxruntime.so` / `libonnxruntime.so.1` (Linux/Android),
+   `libonnxruntime.dylib` / `libonnxruntime.1.dylib` (macOS),
+   `onnxruntime.dll` (Windows).
+
+In both cases, if the host process has **already loaded** a library with that
+name, the existing instance is reused (`RTLD_NOLOAD`), so ORT is shared rather
+than mapped twice. If nothing can be resolved, a clear error is logged and ORT
+calls fail gracefully instead of crashing.
+
+> Version note: the host's ORT must be **API-compatible** with the headers
+> sherpa-onnx was built against, i.e. its `ORT_API_VERSION` should be **≥** the
+> one used at build time.
+
+### Example (Linux)
+
+```bash
+# Build sherpa-onnx in dynamic-loading mode.
+cmake -DSHERPA_ONNX_ENABLE_DYNAMIC_ORT_LOADING=ON -B build
+cmake --build build
+
+# libsherpa-onnx-core has no libonnxruntime in its NEEDED entries:
+ldd build/lib/libsherpa-onnx-c-api.so | grep onnxruntime   # -> (no output)
+
+# Point it at the ORT the host provides (or rely on the default search path):
+export SHERPA_ONNX_DYNAMIC_ORT_LIBRARY_PATH=/opt/host-app/lib/libonnxruntime.so.1
+./your-host-app     # sherpa-onnx and the host now share one ORT instance
+```
 
 
 ## Introduction

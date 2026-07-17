@@ -87,7 +87,9 @@ set_target_properties(spacemit_ep PROPERTIES
 file(GLOB onnxruntime_lib_files
   "${onnxruntime_SOURCE_DIR}/lib/libonnxruntime*")
 message(STATUS "onnxruntime lib files: ${onnxruntime_lib_files}")
-install(FILES ${onnxruntime_lib_files} DESTINATION lib)
+if(NOT SHERPA_ONNX_ENABLE_DYNAMIC_ORT_LOADING)
+  install(FILES ${onnxruntime_lib_files} DESTINATION lib)
+endif()
 
 file(GLOB spacemit_ep_lib_files
   "${onnxruntime_SOURCE_DIR}/lib/libspacemit_ep*")

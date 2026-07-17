@@ -356,6 +356,12 @@ if(SHERPA_ONNX_ENABLE_CHECK)
   list(APPEND sources log.cc)
 endif()
 
+if(SHERPA_ONNX_ENABLE_DYNAMIC_ORT_LOADING AND SHERPA_ONNX_DYNAMIC_ORT_USE_SHIM)
+  # Only the dlopen shim needs this source file. When the shim is disabled the
+  # onnxruntime C entry points are left undefined for the host to resolve.
+  list(APPEND sources ort-dynamic-loader.cc)
+endif()
+
 # Always static build
 add_library(sherpa-onnx-core STATIC ${sources})
 
@@ -459,7 +465,31 @@ if(SHERPA_ONNX_ENABLE_SPACEMIT)
   endif()
 endif()
 
-if(TARGET onnxruntime)
+if(SHERPA_ONNX_ENABLE_DYNAMIC_ORT_LOADING)
+  # Do NOT link libonnxruntime. We only need its headers at compile time.
+  #
+  # With SHERPA_ONNX_DYNAMIC_ORT_USE_SHIM=ON (default), the actual library is
+  # loaded at runtime via dlopen/LoadLibrary (see ort-dynamic-loader.cc), so a
+  # single onnxruntime instance can be shared with the host application.
+  #
+  # With SHERPA_ONNX_DYNAMIC_ORT_USE_SHIM=OFF, the onnxruntime C entry points
+  # are left undefined and resolved by an onnxruntime the host provides (e.g.
+  # the onnxruntime-c CocoaPod on iOS). No dlopen is involved in that case.
+  if(TARGET onnxruntime)
+    # Reuse the include directories discovered/downloaded by cmake/onnxruntime*
+    # without adding a link dependency on the shared library.
+    get_target_property(_sherpa_onnx_ort_include_dirs
+      onnxruntime INTERFACE_INCLUDE_DIRECTORIES)
+    if(_sherpa_onnx_ort_include_dirs)
+      target_include_directories(sherpa-onnx-core PUBLIC
+        ${_sherpa_onnx_ort_include_dirs})
+    endif()
+  endif()
+  if(NOT WIN32 AND SHERPA_ONNX_DYNAMIC_ORT_USE_SHIM)
+    # dlopen/dlsym live in libdl; only the shim needs them.
+    target_link_libraries(sherpa-onnx-core ${CMAKE_DL_LIBS})
+  endif()
+elseif(TARGET onnxruntime)
   target_link_libraries(sherpa-onnx-core onnxruntime)
 else()
   target_link_libraries(sherpa-onnx-core ${onnxruntime_lib_files})

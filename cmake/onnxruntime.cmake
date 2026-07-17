@@ -218,10 +218,14 @@ if(location_onnxruntime_header_dir AND location_onnxruntime_lib)
 
     message(STATUS "onnxruntime lib files: ${onnxruntime_lib_files}")
 
-    install(FILES ${onnxruntime_lib_files} DESTINATION lib)
+    if(NOT SHERPA_ONNX_ENABLE_DYNAMIC_ORT_LOADING)
+      # In dynamic-loading mode we do not bundle libonnxruntime; the host
+      # application is expected to provide it at runtime.
+      install(FILES ${onnxruntime_lib_files} DESTINATION lib)
 
-    if(WIN32)
-      install(FILES ${onnxruntime_lib_files} DESTINATION bin)
+      if(WIN32)
+        install(FILES ${onnxruntime_lib_files} DESTINATION bin)
+      endif()
     endif()
   endif()
 else()

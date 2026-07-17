@@ -70,4 +70,8 @@ set_target_properties(onnxruntime PROPERTIES
 
 file(GLOB onnxruntime_lib_files "${onnxruntime_SOURCE_DIR}/lib/libonnxruntime*")
 message(STATUS "onnxruntime lib files: ${onnxruntime_lib_files}")
-install(FILES ${onnxruntime_lib_files} DESTINATION lib)
+if(NOT SHERPA_ONNX_ENABLE_DYNAMIC_ORT_LOADING)
+  # In dynamic-loading mode we do not bundle libonnxruntime; the host
+  # application is expected to provide it at runtime.
+  install(FILES ${onnxruntime_lib_files} DESTINATION lib)
+endif()

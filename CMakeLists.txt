@@ -71,6 +71,29 @@ option(SHERPA_ONNX_ENABLE_TTS "Whether to build TTS related code" ON)
 option(SHERPA_ONNX_ENABLE_SPEAKER_DIARIZATION "Whether to build speaker diarization related code" ON)
 option(SHERPA_ONNX_LINK_LIBSTDCPP_STATICALLY "True to link libstdc++ statically. Used only when BUILD_SHARED_LIBS is OFF on Linux" ON)
 option(SHERPA_ONNX_USE_PRE_INSTALLED_ONNXRUNTIME_IF_AVAILABLE "True to use pre-installed onnxruntime if available" ON)
+option(SHERPA_ONNX_ENABLE_DYNAMIC_ORT_LOADING "Do not link libonnxruntime at build time; load it at runtime with dlopen/LoadLibrary so a single onnxruntime instance can be shared with the host application" OFF)
+# When dynamic ORT loading is on, this controls HOW the onnxruntime C entry
+# points are provided:
+#   ON  (default): sherpa-onnx defines OrtGetApiBase (and the provider factory
+#                  symbols) itself and resolves the real library at runtime with
+#                  dlopen/dlsym. Self-contained; used on Linux/Android/desktop.
+#   OFF          : sherpa-onnx does NOT define those symbols. They are left
+#                  undefined and are expected to be resolved, at final-link or
+#                  load time, by an onnxruntime the host already provides (e.g.
+#                  the onnxruntime-c CocoaPod on iOS). Use this to share a single
+#                  statically/dynamically linked onnxruntime that lives outside
+#                  of sherpa-onnx.
+option(SHERPA_ONNX_DYNAMIC_ORT_USE_SHIM "With dynamic ORT loading, provide OrtGetApiBase via a dlopen shim (ON) or leave ORT symbols undefined for the host to resolve (OFF)" ON)
+
+if(SHERPA_ONNX_ENABLE_DYNAMIC_ORT_LOADING AND NOT SHERPA_ONNX_DYNAMIC_ORT_USE_SHIM)
+  # sherpa-onnx will not define the onnxruntime C entry points; allow the final
+  # shared libraries/frameworks to be linked with those symbols left undefined,
+  # to be resolved at load time from whatever onnxruntime the host provides.
+  if(APPLE)
+    string(APPEND CMAKE_SHARED_LINKER_FLAGS " -Wl,-undefined,dynamic_lookup")
+    string(APPEND CMAKE_MODULE_LINKER_FLAGS " -Wl,-undefined,dynamic_lookup")
+  endif()
+endif()
 option(SHERPA_ONNX_ENABLE_SANITIZER "Whether to enable ubsan and asan" OFF)
 option(SHERPA_ONNX_BUILD_C_API_EXAMPLES "Whether to enable C API examples" ${SUGGEST_BUILD_BINARIES})
 option(SHERPA_ONNX_ENABLE_RKNN "Whether to build for RKNN NPU " OFF)

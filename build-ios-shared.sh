@@ -38,6 +38,24 @@ if [ ! -f $onnxruntime_dir/onnxruntime.xcframework/ios-arm64/onnxruntime.framewo
   popd
 fi
 
+# Optional: build sherpa-onnx WITHOUT embedding onnxruntime, so that it shares a
+# single onnxruntime provided by the host app at runtime (e.g. the onnxruntime-c
+# CocoaPod pulled in by the `onnxruntime` Flutter plugin). This avoids shipping
+# two copies of onnxruntime in the same process, which crashes on iOS.
+#
+# Enable with:  SHERPA_ONNX_IOS_NO_EMBED_ORT=1 ./build-ios-shared.sh
+#
+# The resulting sherpa_onnx.framework leaves OrtGetApiBase (and the CoreML
+# provider symbol) undefined; they are resolved at load time from the host's
+# onnxruntime. The host MUST provide an ABI-compatible onnxruntime (same
+# ORT_API_VERSION, i.e. the same 1.27.0 used here).
+extra_cmake_args=""
+if [ "$SHERPA_ONNX_IOS_NO_EMBED_ORT" = "1" ]; then
+  echo "SHERPA_ONNX_IOS_NO_EMBED_ORT=1: NOT embedding onnxruntime into sherpa_onnx.framework"
+  echo "  -> the host app must provide onnxruntime-c 1.27.0 at runtime"
+  extra_cmake_args="-DSHERPA_ONNX_ENABLE_DYNAMIC_ORT_LOADING=ON -DSHERPA_ONNX_DYNAMIC_ORT_USE_SHIM=OFF"
+fi
+
 # First, for simulator
 echo "Building for simulator (x86_64)"
 
@@ -53,6 +71,7 @@ echo "SHERPA_ONNXRUNTIME_INCLUDE_DIR $SHERPA_ONNXRUNTIME_INCLUDE_DIR"
 #
 if [[ ! -f build/simulator_x86_64/install/lib/libsherpa-onnx-c-api.dylib ]]; then
   cmake \
+    $extra_cmake_args \
     -DSHERPA_ONNX_ENABLE_BINARY=OFF \
     -DBUILD_PIPER_PHONMIZE_EXE=OFF \
     -DBUILD_PIPER_PHONMIZE_TESTS=OFF \
@@ -86,6 +105,7 @@ echo "Building for simulator (arm64)"
 
 if [[ ! -f build/simulator_arm64/install/lib/libsherpa-onnx-c-api.dylib ]]; then
   cmake \
+    $extra_cmake_args \
     -DSHERPA_ONNX_ENABLE_BINARY=OFF \
     -DBUILD_PIPER_PHONMIZE_EXE=OFF \
     -DBUILD_PIPER_PHONMIZE_TESTS=OFF \
@@ -122,6 +142,7 @@ if [[ ! -f build/os64/install/lib/libsherpa-onnx-c-api.dylib ]]; then
   export SHERPA_ONNXRUNTIME_INCLUDE_DIR=$PWD/ios-onnxruntime/onnxruntime.xcframework/ios-arm64/onnxruntime.framework/Headers
 
   cmake \
+    $extra_cmake_args \
     -DSHERPA_ONNX_ENABLE_BINARY=OFF \
     -DBUILD_PIPER_PHONMIZE_EXE=OFF \
     -DBUILD_PIPER_PHONMIZE_TESTS=OFF \
@@ -302,3 +323,26 @@ echo "PWD: $PWD"
 ls -lh
 echo "---"
 ls -lh */*
+
+cd "$dir"
+
+# When building the no-embedded-ORT (slim) framework, install the resulting
+# xcframework straight into the Flutter iOS plugin so an app can consume it via
+#   dependency_overrides:
+#     sherpa_onnx_ios:
+#       path: /path/to/sherpa-onnx/flutter/sherpa_onnx_ios
+# with no manual copy step. Default upstream behavior is unchanged.
+if [ "$SHERPA_ONNX_IOS_NO_EMBED_ORT" = "1" ]; then
+  flutter_ios_plugin=flutter/sherpa_onnx_ios/ios
+  if [ -d "$flutter_ios_plugin" ]; then
+    echo "Installing sherpa_onnx.xcframework into $flutter_ios_plugin for direct Flutter use"
+    rm -rf "$flutter_ios_plugin/sherpa_onnx.xcframework"
+    cp -R sherpa_onnx.xcframework "$flutter_ios_plugin/"
+    echo "Done. In your app's pubspec.yaml add:"
+    echo "  dependency_overrides:"
+    echo "    sherpa_onnx_ios:"
+    echo "      path: $dir/flutter/sherpa_onnx_ios"
+  else
+    echo "WARNING: $flutter_ios_plugin not found; left sherpa_onnx.xcframework in $dir"
+  fi
+fi

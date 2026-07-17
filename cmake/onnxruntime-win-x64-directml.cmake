@@ -91,12 +91,18 @@ else()
     message(STATUS "onnxruntime lib files: ${onnxruntime_lib_files}")
 
     if(SHERPA_ONNX_ENABLE_PYTHON)
-      install(FILES ${onnxruntime_lib_files} DESTINATION ..)
+      if(NOT SHERPA_ONNX_ENABLE_DYNAMIC_ORT_LOADING)
+        install(FILES ${onnxruntime_lib_files} DESTINATION ..)
+      endif()
     else()
-      install(FILES ${onnxruntime_lib_files} DESTINATION lib)
+      if(NOT SHERPA_ONNX_ENABLE_DYNAMIC_ORT_LOADING)
+        install(FILES ${onnxruntime_lib_files} DESTINATION lib)
+      endif()
     endif()
 
-    install(FILES ${onnxruntime_lib_files} DESTINATION bin)
+    if(NOT SHERPA_ONNX_ENABLE_DYNAMIC_ORT_LOADING)
+      install(FILES ${onnxruntime_lib_files} DESTINATION bin)
+    endif()
 
 endif()
 

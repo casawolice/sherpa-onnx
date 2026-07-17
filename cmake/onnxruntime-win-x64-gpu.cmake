@@ -87,5 +87,9 @@ file(GLOB onnxruntime_lib_files "${onnxruntime_SOURCE_DIR}/lib/*.dll")
 
 message(STATUS "onnxruntime lib files: ${onnxruntime_lib_files}")
 
-install(FILES ${onnxruntime_lib_files} DESTINATION lib)
-install(FILES ${onnxruntime_lib_files} DESTINATION bin)
+if(NOT SHERPA_ONNX_ENABLE_DYNAMIC_ORT_LOADING)
+  install(FILES ${onnxruntime_lib_files} DESTINATION lib)
+endif()
+if(NOT SHERPA_ONNX_ENABLE_DYNAMIC_ORT_LOADING)
+  install(FILES ${onnxruntime_lib_files} DESTINATION bin)
+endif()
