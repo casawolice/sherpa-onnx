@@ -26,13 +26,29 @@ sherpa **不再内嵌 ORT**，把 `OrtGetApiBase` 等符号留为未定义
 
 ## 用法
 
-### 1. 获取瘦身 xcframework
+### 1. 让 App 使用瘦身版 iOS 插件（推荐：git 依赖）
 
-从本仓库 **Releases** 下载 `sherpa_onnx-ios-flutter.xcframework.zip` 并解压，
-得到 `sherpa_onnx.xcframework`（含 `ios-arm64` 真机 + `ios-arm64_x86_64-simulator`
-模拟器两个 slice）。
+瘦身版 `sherpa_onnx.xcframework` 已直接提交在本仓库
+[`flutter/sherpa_onnx_ios/ios/`](../flutter/sherpa_onnx_ios/ios/) 下，无需下载
+Release 或本地构建，在 App 的 `pubspec.yaml` 里直接用 git 依赖覆盖即可：
 
-或自行构建（需 Xcode）：
+```yaml
+dependency_overrides:
+  sherpa_onnx_ios:
+    git:
+      url: https://github.com/casawolice/sherpa-onnx.git
+      ref: c5ac5a1361f946893bad9b197a8223b3e316bfad   # 锁定 commit，而非分支
+      path: flutter/sherpa_onnx_ios
+```
+
+`ref` 建议锁定到具体 commit hash（而非 `master`），保证任何人 clone 你的 App 后
+`flutter pub get` 拿到的都是同一份 xcframework，不随 fork 更新漂移。要升级时，
+去 [casawolice/sherpa-onnx](https://github.com/casawolice/sherpa-onnx/commits/master)
+找到新的 commit hash，手动更新 `ref`。
+
+### 1b. 备选：本地路径 / 自行构建
+
+如果你需要修改 sherpa 源码后立刻联调，可以本地构建并用 `path:` 覆盖：
 
 ```bash
 git clone https://github.com/casawolice/sherpa-onnx
@@ -41,21 +57,17 @@ SHERPA_ONNX_IOS_NO_EMBED_ORT=1 ./build-ios-shared.sh
 # 产物会自动装进 flutter/sherpa_onnx_ios/ios/sherpa_onnx.xcframework
 ```
 
-### 2. 让 App 使用瘦身版 iOS 插件
-
-把解压得到的 `sherpa_onnx.xcframework` 放到一份本地 `sherpa_onnx_ios` 插件的
-`ios/` 目录下（覆盖原有的同名 framework），然后在 App 的 `pubspec.yaml` 里覆盖依赖：
-
 ```yaml
 dependency_overrides:
   sherpa_onnx_ios:
     path: /absolute/path/to/sherpa-onnx/flutter/sherpa_onnx_ios
 ```
 
-> 用自行构建的方式时，`flutter/sherpa_onnx_ios` 已经就地含有瘦身 xcframework，
-> 直接把 `path` 指向它即可。
+（也可以从本仓库 **Releases** 下载 `sherpa_onnx-ios-flutter.xcframework.zip`
+解压后手动替换到某份本地 `sherpa_onnx_ios` 插件的 `ios/` 目录下，再用 `path:`
+指向它，效果等同。）
 
-### 3. 保留 App 里那唯一一份 onnxruntime
+### 2. 保留 App 里那唯一一份 onnxruntime
 
 不要动你的 `onnxruntime` Dart 包 —— 它带的 `onnxruntime-c 1.27.0` 就是全 App
 唯一的 ORT，sherpa 会共用它。确认 `ios/Podfile` 是 `use_frameworks!`（动态
@@ -69,7 +81,7 @@ target 'Runner' do
 end
 ```
 
-### 4. 安装并运行
+### 3. 安装并运行
 
 ```bash
 cd your_app
