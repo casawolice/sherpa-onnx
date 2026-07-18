@@ -312,6 +312,15 @@ for d in ios-arm64_x86_64-simulator ios-arm64; do
 EOF
 done
 
+# strip/install_name_tool above leave the frameworks with a stray ad-hoc
+# signature whose identifier defaults to the tool's internal temp filename
+# (e.g. "sherpa_onnx.strip") instead of matching CFBundleIdentifier. Re-sign
+# explicitly so `codesign -dv` reports the same identifier as the Info.plist
+# (com.k2fsa.sherpa.onnx), which is what Xcode/App Store validation expects.
+for d in ios-arm64_x86_64-simulator ios-arm64; do
+  codesign --force --sign - --identifier com.k2fsa.sherpa.onnx "$d/sherpa_onnx.framework"
+done
+
 rm -rf sherpa_onnx.xcframework
 xcodebuild -create-xcframework \
   -framework ios-arm64/sherpa_onnx.framework \
