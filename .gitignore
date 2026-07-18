@@ -1,6 +1,5 @@
 build
 build-ios-shared/
-flutter/sherpa_onnx_ios/ios/sherpa_onnx.xcframework/
 *.zip
 *.tgz
 *.sw?
