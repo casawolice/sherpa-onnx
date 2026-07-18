@@ -1,3 +1,6 @@
+[![English](https://img.shields.io/badge/doc-English-lightgrey.svg)](./flutter-ios-shared-ort.en.md)
+[![中文](https://img.shields.io/badge/doc-中文-blue.svg)](./flutter-ios-shared-ort.md)
+
 # Flutter iOS：与宿主 App 共用一份 onnxruntime（瘦身版 sherpa_onnx）
 
 ## 这是什么

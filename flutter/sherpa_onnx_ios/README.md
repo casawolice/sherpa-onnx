@@ -1,3 +1,6 @@
+[![English](https://img.shields.io/badge/README-English-blue.svg)](./README.md)
+[![中文](https://img.shields.io/badge/README-中文-lightgrey.svg)](./README-zh.md)
+
 # sherpa_onnx_ios
 
 This is a sub project of [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx).
@@ -71,4 +74,5 @@ otool -L "$b" | grep onnxruntime || echo ok    # no onnxruntime link dependency
 ```
 
 Full usage guide, troubleshooting, and how the symbol sharing works:
-[`docs/flutter-ios-shared-ort.md`](../../docs/flutter-ios-shared-ort.md).
+[`docs/flutter-ios-shared-ort.en.md`](../../docs/flutter-ios-shared-ort.en.md)
+(中文版: [`docs/flutter-ios-shared-ort.md`](../../docs/flutter-ios-shared-ort.md)).
