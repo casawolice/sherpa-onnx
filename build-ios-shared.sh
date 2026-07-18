@@ -324,7 +324,8 @@ ls -lh
 echo "---"
 ls -lh */*
 
-cd "$dir"
+# Back to the repo root (we are currently in <repo>/$dir/sherpa_onnx.xcframework).
+cd ../..
 
 # When building the no-embedded-ORT (slim) framework, install the resulting
 # xcframework straight into the Flutter iOS plugin so an app can consume it via
@@ -337,11 +338,11 @@ if [ "$SHERPA_ONNX_IOS_NO_EMBED_ORT" = "1" ]; then
   if [ -d "$flutter_ios_plugin" ]; then
     echo "Installing sherpa_onnx.xcframework into $flutter_ios_plugin for direct Flutter use"
     rm -rf "$flutter_ios_plugin/sherpa_onnx.xcframework"
-    cp -R sherpa_onnx.xcframework "$flutter_ios_plugin/"
+    cp -R "$dir/sherpa_onnx.xcframework" "$flutter_ios_plugin/"
     echo "Done. In your app's pubspec.yaml add:"
     echo "  dependency_overrides:"
     echo "    sherpa_onnx_ios:"
-    echo "      path: $dir/flutter/sherpa_onnx_ios"
+    echo "      path: $PWD/flutter/sherpa_onnx_ios"
   else
     echo "WARNING: $flutter_ios_plugin not found; left sherpa_onnx.xcframework in $dir"
   fi
